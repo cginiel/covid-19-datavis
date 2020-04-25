@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 import requests
 import sys
 import secrets
+import csv
 
 ################## global vars ##############################
 CACHE_FILENAME = "cache.json"
@@ -11,7 +12,7 @@ API_KEY = secrets.rapid_api_key
 covid_url = "https://covid-193.p.rapidapi.com/statistics"
 #############################################################
 
-def get_wiki_data():
+def scrape_wiki_data():
     '''Parses wikipedia page for table contents.
 
     params
@@ -37,23 +38,35 @@ def get_wiki_data():
     for h in top_headings:
         if "[4]" in h:
             h = h[0:-3]
+        if "(" in h:
+            h2 = h.split("(")
+            h3 = " (".join(h2)
         cleaned_headings.append(h)
+        # print(f"H: {h}")
     # print(cleaned_headings)
 
     # find table columns
+    col1 = []
+    col2 = []
+    col3 = []
+    col4 = []
+    col5 = []
+    col6 = []
     with open('wiki_data.txt', 'w') as fo:
         for tr in countries_table[0].find_all('tr'):
             tds = tr.find_all('td')
             if not tds:
                 continue
             # might want to figure out a better way to assign your data so you can add it to a dict
-            for td in tds[:5]:
-                cleaned_headings[0] = [td.text.strip()]
-                print(cleaned_headings[0])
-            # cleaned_headings[0], cleaned_headings[1], cleaned_headings[2], cleaned_headings[3], cleaned_headings[4] = [td.text.strip() for td in tds[:5]]
-            # print('; '.join([cleaned_headings[0], cleaned_headings[1], cleaned_headings[2], cleaned_headings[3], cleaned_headings[4]]), file=fo)
-
+            for td in tds[:6]:
+                if "[u]" in td:
+                    # print(td)
+                    td = td[0:-3]
+                # print(f"TD: {td.text.strip()}")
+            col1, col2, col3, col4, col5, col6 = [td.text.strip() for td in tds[:6]]
+            print(', '.join([col1, col2, col3, col4, col5, col6]), file=fo)
     # to make dict: think about how you can create a dictionary using the cleaned_headings for keys and the rows of the txt doc for values.
+
 
 
 def make_request(base_url):
@@ -83,10 +96,29 @@ if __name__ == '__main__':
     ## light cleaning of the API json
 
     all_countries = make_request(covid_url)['response']
+    countries_list = []
+    new_cases_list = []
+    active_cases_list = []
+    total_cases_list = []
+    new_deaths_list = []
     for country in all_countries:
-      print(country['country'])
-      print(country['cases'])
-    get_wiki_data()
+        countries_list.append(country['country'])
+        new_cases_list.append(country['cases']['new']) # need to remove plus signs
+        active_cases_list.append(country['cases']['active'])
+        total_cases_list.append(country['cases']['total'])
+        new_deaths_list.append(country['deaths']['new']) # need to remove plus signs
+    for n in new_cases_list:
+        if n != None:
+            if "+" in n:
+                n = n[1:]
+                new_cases_list.append(n)
+    print(new_cases_list)
+        # new_cases_list.append(n)
+
+    # print(new_deaths_list)
+    # print(all_countries)
+    covid_dict = {}
+    # scrape_wiki_data()
     
 
 
