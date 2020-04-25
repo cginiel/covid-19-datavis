@@ -281,6 +281,8 @@ def load_cases():
             v['total cases']
             ]
         )
+    conn.commit()
+    conn.close()
 
 
 if __name__ == '__main__':
@@ -289,8 +291,6 @@ if __name__ == '__main__':
     covid_dict = create_covid_cases_dict(make_request(covid_url))
     create_db()
     load_cases()
-    conn.commit()
-    conn.close()
     # print(covid_dict)
     
 
