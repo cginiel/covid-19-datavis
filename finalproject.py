@@ -35,6 +35,7 @@ def scrape_wiki_data():
     wikipedia_url = "https://en.wikipedia.org/wiki/List_of_countries_by_population_(United_Nations)"
     response = requests.get(wikipedia_url)
     soup = BeautifulSoup(response.text, "html.parser")
+    make_request_with_cache(wikipedia_url, soup.prettify())
 
     countries_table = soup.find_all('table', class_='sortable')
 
@@ -107,7 +108,6 @@ def scrape_wiki_data():
         }
 
     return countries_pop_dict
-
 
 
 def make_request(base_url):
@@ -277,6 +277,7 @@ def create_db():
     cur = conn.cursor()
 
     drop_covid_cases_sql = 'DROP TABLE IF EXISTS "Cases"'
+    drop_country_population_sql = 'DROP TABLE IF EXISTS "Population"'
     
 
     create_covid_cases_sql = '''
@@ -290,8 +291,22 @@ def create_db():
         )
     '''
 
+    create_country_population_sql = '''
+        CREATE TABLE IF NOT EXISTS "Population" (
+            "Id" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "Country" TEXT NOT NULL,
+            "UNContinentalRegion" TEXT NOT NULL,
+            "UNStatisticalRegion" TEXT NOT NULL,
+            "2018population" INTEGER NOT NULL,
+            "2019population" INTEGER NOT NULL,
+            "PopulationChange" TEXT NOT NULL
+        )
+    '''
+
     cur.execute(drop_covid_cases_sql)
     cur.execute(create_covid_cases_sql)
+    cur.execute(drop_country_population_sql)
+    cur.execute(create_country_population_sql)
     conn.commit()
     conn.close()
 
@@ -318,13 +333,39 @@ def load_cases():
     conn.commit()
     conn.close()
 
+def load_population():
+    pop_dict = scrape_wiki_data()
+
+    insert_sql = '''
+        INSERT INTO Population
+        VALUES (NULL, ?, ?, ?, ?, ?, ?)
+    '''
+
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    for k,v in pop_dict.items():
+        cur.execute(insert_sql,[
+            k,
+            v['UN continental region'],
+            v['UN statistical region'],
+            v['2018 population'],
+            v['2019 population'],
+            v['percentage population change']
+            ]
+        )
+    conn.commit()
+    conn.close()
+
 
 if __name__ == '__main__':
-    # CACHE_DICT = open_cache()
-    # covid_dict = create_covid_cases_dict(make_request(covid_url))
-    # create_db()
-    # load_cases()
-    print(scrape_wiki_data())
+    CACHE_DICT = open_cache()
+    create_covid_cases_dict(make_request(covid_url))
+    scrape_wiki_data()
+    create_db()
+    load_cases()
+    load_population()
+    
     
 
 
