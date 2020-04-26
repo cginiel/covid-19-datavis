@@ -49,31 +49,65 @@ def scrape_wiki_data():
         if "(" in h:
             h2 = h.split("(")
             h3 = " (".join(h2)
+            cleaned_headings.append(h3)
         cleaned_headings.append(h)
-        # print(f"H: {h}")
-    # print(cleaned_headings)
+    cleaned_headings.remove(cleaned_headings[4])
+    cleaned_headings.remove(cleaned_headings[5])
 
-    # find table columns
-    col1 = []
-    col2 = []
-    col3 = []
-    col4 = []
-    col5 = []
-    col6 = []
-    with open('wiki_data.txt', 'w') as fo:
-        for tr in countries_table[0].find_all('tr'):
-            tds = tr.find_all('td')
-            if not tds:
-                continue
-            # might want to figure out a better way to assign your data so you can add it to a dict
-            for td in tds[:6]:
-                if "[u]" in td:
-                    # print(td)
-                    td = td[0:-3]
-                # print(f"TD: {td.text.strip()}")
-            col1, col2, col3, col4, col5, col6 = [td.text.strip() for td in tds[:6]]
-            print(', '.join([col1, col2, col3, col4, col5, col6]), file=fo)
-    # to make dict: think about how you can create a dictionary using the cleaned_headings for keys and the rows of the txt doc for values.
+    countries_list = []
+    UN_CR_list = []
+    UN_SR_list = []
+    pop_2018_list = []
+    pop_2019_list = []
+    change_list = []
+    countries_pop_dict = {}
+
+    countries_table = soup.find_all('table', class_='sortable')
+    tbody = countries_table[0].find('tbody')
+    trs = tbody.find_all('tr', recursive=False)
+
+    for tr in trs: # we have to loop through each tr to get to the tds
+        tds = tr.find_all('td') # here lie our tds
+        if not tds: # ignore empty elements
+            continue
+
+        # we get our country name by indexing the tds (since there are many tds per tr)
+        country_name = tds[0].text.strip() 
+        if "[" in country_name:
+            country_name = country_name[:-3] # cleaning the wikipedia notation off of the names
+        countries_list.append(country_name)
+        
+        # add UN continental region data to list
+        continental_region = tds[1].text.strip()
+        UN_CR_list.append(continental_region)
+        
+        # add UN statistical region to list
+        statistical_region = tds[2].text.strip()
+        UN_SR_list.append(statistical_region)
+
+        # add 2018 population
+        pop_2018 = tds[3].text.strip()
+        pop_2018_list.append(pop_2018)
+
+        # add 2019 population
+        pop_2019 = tds[4].text.strip()
+        pop_2019_list.append(pop_2019)
+
+        # add population change percentage
+        change = tds[5].text.strip()
+        change_list.append(change)
+
+    for i in range(len(countries_list)):
+        countries_pop_dict[countries_list[i]] = {
+            'UN continental region': UN_CR_list[i],
+            'UN statistical region': UN_SR_list[i],
+            '2018 population': pop_2018_list[i],
+            '2019 population': pop_2019_list[i],
+            'percentage population change': change_list[i]
+        }
+
+    return countries_pop_dict
+
 
 
 def make_request(base_url):
@@ -252,7 +286,7 @@ def create_db():
             "NewCases" INTEGER NULL,
             "ActiveCases" INTEGER NULL,
             "NewDeaths" INTEGER NULL,
-            "TotalCases" INTEGER NOT NULL
+            "TotalCases" INTEGER NULL
         )
     '''
 
@@ -286,12 +320,11 @@ def load_cases():
 
 
 if __name__ == '__main__':
-    conn = sqlite3.connect(DB_NAME)
-    CACHE_DICT = open_cache()
-    covid_dict = create_covid_cases_dict(make_request(covid_url))
-    create_db()
-    load_cases()
-    # print(covid_dict)
+    # CACHE_DICT = open_cache()
+    # covid_dict = create_covid_cases_dict(make_request(covid_url))
+    # create_db()
+    # load_cases()
+    print(scrape_wiki_data())
     
 
 
