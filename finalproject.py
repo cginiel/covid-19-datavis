@@ -9,6 +9,9 @@ import sys
 import secrets
 import json
 import sqlite3
+from flask import Flask, render_template, request
+import plotly.graph_objects as go
+
 
 ################## global vars ##############################
 CACHE_FILENAME = "covid_cache.json"
@@ -18,8 +21,9 @@ API_KEY = secrets.rapid_api_key
 covid_url = "https://covid-193.p.rapidapi.com/statistics"
 
 DB_NAME = 'covid_stats.sqlite'
-########### data gathering and sorting #################
 
+
+########### data gathering and sorting #################
 def scrape_wiki_data():
     '''Parses wikipedia page for table contents.
 
@@ -86,12 +90,18 @@ def scrape_wiki_data():
         statistical_region = tds[2].text.strip()
         UN_SR_list.append(statistical_region)
 
-        # add 2018 population
+        # add 2018 population, clean comma and convert to int
         pop_2018 = tds[3].text.strip()
+        if ',' in pop_2018:
+            pop_2018 = pop_2018.replace(',', '')
+        pop_2018 = int(pop_2018)
         pop_2018_list.append(pop_2018)
 
-        # add 2019 population
+        # add 2019 population, clean comma and convert to int
         pop_2019 = tds[4].text.strip()
+        if ',' in pop_2019:
+            pop_2019 = pop_2019.replace(',', '')
+        pop_2019 = int(pop_2019)
         pop_2019_list.append(pop_2019)
 
         # add population change percentage
@@ -332,6 +342,16 @@ def create_db():
 
 
 def load_cases():
+    '''Loads covid cases into a SQL database.
+
+    params
+    ------
+    None
+
+    returns
+    -------
+    None
+    '''
     covid_dict = create_covid_cases_dict(make_request(covid_url))
 
     insert_sql = '''
@@ -356,6 +376,16 @@ def load_cases():
     
 
 def load_population():
+    '''Loads countries' population data into a SQL database.
+
+    params
+    ------
+    None
+
+    returns
+    -------
+    None
+    '''
     pop_dict = scrape_wiki_data()
 
     insert_sql = '''
@@ -380,6 +410,56 @@ def load_population():
     conn.close()
 
 
+##################### user entry ##########################
+def access_cases_table(country):
+    '''Selects a country's COVID-19 data from the SQL database to display based on user entry.
+
+    Params
+    ------
+    country : str
+        A country to search for in the database.
+
+    Returns
+    -------
+    list
+        A country's corresponding COVID-19 data.
+    '''
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    query = f'''
+        SELECT NewCases, ActiveCases, NewDeaths, TotalCases
+        FROM Cases
+        WHERE Country = "{country}"
+    '''
+    result = cur.execute(query).fetchall()
+    conn.close()
+    return result
+
+
+def access_population_table(country):
+    '''Selects a country's population from the SQL database to display based on user entry.
+
+    Params
+    ------
+    country : str
+        A country to search for in the database.
+
+    Returns
+    -------
+    list
+        A country's corresponding population data.
+    '''
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    query = f'''
+        SELECT "2019population"
+        FROM Population
+        WHERE Country = "{country}"
+    '''
+    result = cur.execute(query).fetchall()
+    conn.close()
+    return result
+
 if __name__ == '__main__':
     CACHE_DICT = open_cache()
     create_covid_cases_dict(make_request(covid_url))
@@ -387,14 +467,16 @@ if __name__ == '__main__':
     create_db()
     load_cases()
     load_population()
+    access_cases_table("United States")
+    access_population_table("United States")
     
-    while True:
-        view_data = input(f"View COVID-19 statistics by country. Type in a country (e.g. USA, Japan, Brazil), or \"exit\":\n") 
-        view_data = view_data.lower()
-        if view_data == 'exit':
-            sys.exit()
-        else:
-            pass
+    # while True:
+    #     view_data = input(f"View COVID-19 statistics by country. Type in a country (e.g. USA, Japan, Brazil), or \"exit\" to quit:\n") 
+    #     view_data = view_data.lower()
+    #     if view_data == 'exit':
+    #         sys.exit()
+    #     else:
+    #         pass
     
 
 
