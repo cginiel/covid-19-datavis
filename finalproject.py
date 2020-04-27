@@ -162,20 +162,40 @@ def create_covid_cases_dict(covid_json):
 
     # add our data to their own lists
     for country in all_countries:
-        countries_list.append(country['country'])
-        active_cases_list.append(country['cases']['active'])
-        total_cases_list.append(country['cases']['total'])
+        # add countries
+        c = country['country']
+        if c == "USA":
+            c = "United States"
+        if c == "S-Korea":
+            c = "South Korea"
+        countries_list.append(c)
 
-        # clean the plus sign off of new cases
+        # add active cases, convert None to 0
+        active_cases = country['cases']['active']
+        if active_cases == None:
+            active_cases = 0
+        active_cases_list.append(active_cases)
+
+        # add total cases, convert None to 0
+        total_cases = country['cases']['total']
+        if total_cases == None:
+            total_cases = 0
+        total_cases_list.append(total_cases)
+
+        # clean the plus sign off of new cases, convert None to 0
         new_cases = country['cases']['new']
         if new_cases != None:
             new_cases = new_cases[1:]
+        if new_cases == None:
+            new_cases = 0
         new_cases_list.append(new_cases)
 
-        # clean the plus sign off of new deaths
+        # clean the plus sign off of new deaths, convert None to 0
         new_deaths = country['deaths']['new']
         if new_deaths != None:
             new_deaths = new_deaths[1:]
+        if new_deaths == None:
+            new_deaths = 0
         new_deaths_list.append(new_deaths)
 
     covid_dict = {}
@@ -284,9 +304,9 @@ def create_db():
         CREATE TABLE IF NOT EXISTS "Cases" (
             "Id" INTEGER PRIMARY KEY AUTOINCREMENT,
             "Country" TEXT NOT NULL,
-            "NewCases" INTEGER NULL,
+            "NewCases" INTEGER NOT NULL,
             "ActiveCases" INTEGER NULL,
-            "NewDeaths" INTEGER NULL,
+            "NewDeaths" INTEGER NOT NULL,
             "TotalCases" INTEGER NULL
         )
     '''
@@ -310,6 +330,7 @@ def create_db():
     conn.commit()
     conn.close()
 
+
 def load_cases():
     covid_dict = create_covid_cases_dict(make_request(covid_url))
 
@@ -332,6 +353,7 @@ def load_cases():
         )
     conn.commit()
     conn.close()
+    
 
 def load_population():
     pop_dict = scrape_wiki_data()
@@ -366,6 +388,13 @@ if __name__ == '__main__':
     load_cases()
     load_population()
     
+    while True:
+        view_data = input(f"View COVID-19 statistics by country. Type in a country (e.g. USA, Japan, Brazil), or \"exit\":\n") 
+        view_data = view_data.lower()
+        if view_data == 'exit':
+            sys.exit()
+        else:
+            pass
     
 
 
