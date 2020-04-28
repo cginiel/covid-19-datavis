@@ -480,14 +480,16 @@ def create_and_display_graphs(user_input):
     active_cases = []
     new_deaths = []
     total_cases = []
-    table_data = [['New Cases', 'Active Cases', 'New Deaths', 'Total Cases']]
-    numbers = []
+    xvals = ['New Cases', 'Active Cases', 'New Deaths', 'Total Cases']
+    yvals = []
 
     for d in access_cases_table(user_input):
-        table_data.append([d[0], d[1], d[2], d[3]])
-        numbers.append([d[0], d[1], d[2], d[3]])
+        yvals.append(d[0])
+        yvals.append(d[1])
+        yvals.append(d[2])
+        yvals.append(d[3]) 
 
-    bar_data = go.Bar(x=table_data, y=numbers)
+    bar_data = go.Bar(x=xvals, y=yvals)
 
     basic_layout = go.Layout(title=f"COVID-19 cases in {user_input.title()}",
         xaxis_title = "Types of cases",
@@ -509,7 +511,6 @@ def create_and_display_graphs(user_input):
         )
 
     fig = go.Figure(data=bar_data, layout=basic_layout)
-
     return fig.show()
 
 
@@ -521,7 +522,7 @@ if __name__ == '__main__':
     load_cases()
     load_population()
 
-    create_and_display_graphs("South Korea")
+    create_and_display_graphs("United States")
     
     # while True:
     #     view_data = input(f'''
