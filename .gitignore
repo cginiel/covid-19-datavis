@@ -1,5 +1,4 @@
 __pycache__
 covid_cache.json
 secrets.py
-wiki_data.txt
 covid_stats.sqlite

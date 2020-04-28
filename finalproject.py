@@ -426,12 +426,12 @@ def access_cases_table(country):
     '''
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    query = f'''
+    q = f'''
         SELECT NewCases, ActiveCases, NewDeaths, TotalCases
         FROM Cases
         WHERE Country = "{country}"
     '''
-    result = cur.execute(query).fetchall()
+    result = cur.execute(q).fetchall()
     conn.close()
     return result
 
@@ -451,14 +451,67 @@ def access_population_table(country):
     '''
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    query = f'''
+    q = f'''
         SELECT "2019population"
         FROM Population
         WHERE Country = "{country}"
     '''
-    result = cur.execute(query).fetchall()
+    result = cur.execute(q).fetchall()
     conn.close()
     return result
+
+
+##################### data vis ############################
+def create_and_display_graphs(user_input):
+    '''Uses plotly to make a bar graph out of user selected data. Launches the plotly graph in the user's browser.
+
+    params
+    ------
+    user_input : str
+        the information the user searches for
+
+    returns
+    -------
+    none
+    '''
+
+    country_names = []
+    new_cases = [] # double check that these lists don't cause any funny business with your lists of the same name in other functions
+    active_cases = []
+    new_deaths = []
+    total_cases = []
+    table_data = [['New Cases', 'Active Cases', 'New Deaths', 'Total Cases']]
+    numbers = []
+
+    for d in access_cases_table(user_input):
+        table_data.append([d[0], d[1], d[2], d[3]])
+        numbers.append([d[0], d[1], d[2], d[3]])
+
+    bar_data = go.Bar(x=table_data, y=numbers)
+
+    basic_layout = go.Layout(title=f"COVID-19 cases in {user_input.title()}",
+        xaxis_title = "Types of cases",
+        yaxis_title = "People",
+        font=dict(
+            family="Roboto Slab, monospace",
+            size=14,
+            color="#000"
+        ),
+        margin_b=125, #increase the bottom margin to have space for caption
+        annotations=[dict(xref='paper',
+            yref='paper',
+            x=0.5,
+            y=-0.25,
+            showarrow=False,
+            font=dict(size=15, color="black"),
+            # text=f"The gap between the average living wage in {user_input.title()} and state minimum wage is"
+            )]
+        )
+
+    fig = go.Figure(data=bar_data, layout=basic_layout)
+
+    return fig.show()
+
 
 if __name__ == '__main__':
     CACHE_DICT = open_cache()
@@ -467,14 +520,19 @@ if __name__ == '__main__':
     create_db()
     load_cases()
     load_population()
-    access_cases_table("United States")
-    access_population_table("United States")
+
+    create_and_display_graphs("South Korea")
     
     # while True:
-    #     view_data = input(f"View COVID-19 statistics by country. Type in a country (e.g. USA, Japan, Brazil), or \"exit\" to quit:\n") 
+    #     view_data = input(f'''
+    #         View COVID-19 statistics by country.\n
+    #         To view a list of all recorded countries, type "view"\n
+    #         Otherwise, type in a country (e.g. USA, Japan, Brazil), or \"exit\" to quit:\n''') 
     #     view_data = view_data.lower()
     #     if view_data == 'exit':
     #         sys.exit()
+    #     elif view_data == "view":
+    #         pass
     #     else:
     #         pass
     
