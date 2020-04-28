@@ -426,11 +426,20 @@ def access_cases_table(country):
     '''
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    q = f'''
-        SELECT NewCases, ActiveCases, NewDeaths, TotalCases
-        FROM Cases
-        WHERE Country = "{country}"
-    '''
+
+    if country.lower() == "all":
+        q = f'''
+            SELECT Country, TotalCases
+            FROM Cases
+            ORDER BY TotalCases DESC
+        '''
+
+    else:
+        q = f'''
+            SELECT NewCases, ActiveCases, NewDeaths, TotalCases
+            FROM Cases
+            WHERE Country = "{country}"
+        '''
     result = cur.execute(q).fetchall()
     conn.close()
     return result
@@ -474,41 +483,57 @@ def create_and_display_graphs(user_input):
     -------
     none
     '''
+    if user_input.lower() == "all":
 
-    country_names = []
-    new_cases = [] # double check that these lists don't cause any funny business with your lists of the same name in other functions
-    active_cases = []
-    new_deaths = []
-    total_cases = []
-    xvals = ['New Cases', 'Active Cases', 'New Deaths', 'Total Cases']
-    yvals = []
+        xvals = []
+        yvals = []
+        for d in access_cases_table(user_input):
+            xvals.append(d[0])
+            yvals.append(d[1])
 
-    for d in access_cases_table(user_input):
-        yvals.append(d[0])
-        yvals.append(d[1])
-        yvals.append(d[2])
-        yvals.append(d[3]) 
+        bar_data = go.Bar(x=xvals, y=yvals)
 
-    bar_data = go.Bar(x=xvals, y=yvals)
+        basic_layout = go.Layout(title=f"Combined New, Active, and Former COVID-19 cases across the globe",
+            xaxis_title = "Country",
+            yaxis_title = "No. People Infected",
+            font=dict(
+                family="Roboto Slab, monospace",
+                size=14,
+                color="#000"
+                ),
+            )
+        
 
-    basic_layout = go.Layout(title=f"COVID-19 cases in {user_input.title()}",
-        xaxis_title = "Types of cases",
-        yaxis_title = "People",
-        font=dict(
-            family="Roboto Slab, monospace",
-            size=14,
-            color="#000"
-        ),
-        margin_b=125, #increase the bottom margin to have space for caption
-        annotations=[dict(xref='paper',
-            yref='paper',
-            x=0.5,
-            y=-0.25,
-            showarrow=False,
-            font=dict(size=15, color="black"),
-            # text=f"The gap between the average living wage in {user_input.title()} and state minimum wage is"
-            )]
-        )
+    else:
+        xvals = ['New Cases', 'Active Cases', 'New Deaths', 'Total Cases']
+        yvals = []
+
+        for d in access_cases_table(user_input):
+            yvals.append(d[0])
+            yvals.append(d[1])
+            yvals.append(d[2])
+            yvals.append(d[3]) 
+
+        bar_data = go.Bar(x=xvals, y=yvals)
+
+        basic_layout = go.Layout(title=f"COVID-19 cases in {user_input.title()}",
+            xaxis_title = "Types of cases",
+            yaxis_title = "People Infected/Affected",
+            font=dict(
+                family="Roboto Slab, monospace",
+                size=14,
+                color="#000"
+            ),
+            margin_b=125, #increase the bottom margin to have space for caption
+            annotations=[dict(xref='paper',
+                yref='paper',
+                x=0.5,
+                y=-0.25,
+                showarrow=False,
+                font=dict(size=15, color="black"),
+                # text=f"The gap between the average living wage in {user_input.title()} and state minimum wage is"
+                )]
+            )
 
     fig = go.Figure(data=bar_data, layout=basic_layout)
     return fig.show()
@@ -522,7 +547,7 @@ if __name__ == '__main__':
     load_cases()
     load_population()
 
-    create_and_display_graphs("United States")
+    create_and_display_graphs("all")
     
     # while True:
     #     view_data = input(f'''
