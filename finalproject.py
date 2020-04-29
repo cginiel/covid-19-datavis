@@ -496,7 +496,7 @@ def create_and_display_cases_graphs(user_input):
 
         bar_data = go.Bar(x=xvals, y=yvals)
 
-        basic_layout = go.Layout(title=f"Combined New, Active, and Former COVID-19 cases across the globe",
+        basic_layout = go.Layout(title=f"Combined new, active, and former COVID-19 cases across the globe",
             xaxis_title = "Country",
             yaxis_title = "No. People Directly Affected by COVID-19",
             font=dict(
@@ -661,8 +661,8 @@ Type \"exit\" to quit.\n
                 ## view detailed info based on one country
                 elif view_data == "2":
                     switch = False
-                    print("You selected to view detailed COVID-19 information based on one country.")
                     while switch == False:
+                        print("You selected to view detailed COVID-19 information based on one country.")
                         country = input('''
 Type in a country to view its data (e.g., Brazil, United States, Japan).
 Type \"back\" to go back.
@@ -670,12 +670,11 @@ Type \"exit\" to quit.
 ''')
                         if country.lower() == "exit":
                             user_exit()
+                        elif country.lower() == "back":
+                            switch = True
                         elif country.title() not in covid_cases_dict.keys():
                             print("[Error] That record doesn't seem to be on file. Check your spelling?")
                             switch = False
-                            break
-                        elif country.lower() == "back":
-                            switch = True
                         else:
                             print(f"Launching graph for {country.title()}")
                             time.sleep(1)
@@ -684,8 +683,8 @@ Type \"exit\" to quit.
                 ## view COVID-19 info compared to country's population
                 elif view_data == "3":
                     switch = "option3"
-                    print("You selected to view detailed COVID-19 information along with a country's 2019 population.")
                     while switch == "option3":
+                        print("You selected to view detailed COVID-19 information along with a country's 2019 population.")
                         country = input('''
 Type in a country to view its data (e.g., Brazil, United States, Japan).
 Type \"back\" to go back.
@@ -695,6 +694,10 @@ Type \"exit\" to quit.
                             user_exit()
                         elif country.lower() == "back":
                             switch = True
+                            break
+                        elif country.title() not in covid_cases_dict.keys():
+                            print("[Error] That record doesn't seem to be on file. Check your spelling?")
+                            switch = "option3"
                         else:
                             print(f"Launching graph for {country.title()}")
                             time.sleep(1)
@@ -714,12 +717,14 @@ Type \"exit\" to quit.
                             user_exit()
                         elif country.lower() == "back":
                             switch = True
+                            break
+                        elif country.title() not in covid_cases_dict.keys():
+                            print("[Error] That record doesn't seem to be on file. Check your spelling?")
                         else:
                             show_country_percentage_affected(country)
             elif view_data != "1" "2" "3" or "4":
                 print("[Error] Please enter a valid number.")
             elif view_data.isaplha():
                 print("[Error] Please enter a valid number.")
-
             else:
                 pass
