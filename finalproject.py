@@ -583,7 +583,8 @@ def show_country_percentage_affected(user_input):
 
     returns
     -------
-    none
+    print : NoneType
+        statement declaring the percentage
     '''
     population_and_total_cases_list = []
 
