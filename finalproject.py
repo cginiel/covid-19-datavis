@@ -9,6 +9,7 @@ import sys
 import secrets
 import json
 import sqlite3
+import time
 from flask import Flask, render_template, request
 import plotly.graph_objects as go
 
@@ -178,6 +179,8 @@ def create_covid_cases_dict(covid_json):
             c = "United States"
         if c == "S-Korea":
             c = "South Korea"
+        if "-" in c:
+            c = c.replace("-", " ")
         countries_list.append(c)
 
         # add active cases, convert None to 0
@@ -410,7 +413,7 @@ def load_population():
     conn.close()
 
 
-##################### user entry ##########################
+##################### accessing DBs via user entry ##########################
 def access_cases_table(country):
     '''Selects a country's COVID-19 data from the SQL database to display based on user entry.
 
@@ -438,7 +441,7 @@ def access_cases_table(country):
         q = f'''
             SELECT NewCases, ActiveCases, NewDeaths, TotalCases
             FROM Cases
-            WHERE Country = "{country}"
+            WHERE Country = "{country.title()}"
         '''
     result = cur.execute(q).fetchall()
     conn.close()
@@ -463,7 +466,7 @@ def access_population_table(country):
     q = f'''
         SELECT "2019population"
         FROM Population
-        WHERE Country = "{country}"
+        WHERE Country = "{country.title()}"
     '''
     result = cur.execute(q).fetchall()
     conn.close()
@@ -471,7 +474,7 @@ def access_population_table(country):
 
 
 ##################### data vis ############################
-def create_and_display_graphs(user_input):
+def create_and_display_cases_graphs(user_input):
     '''Uses plotly to make a bar graph out of user selected data. Launches the plotly graph in the user's browser.
 
     params
@@ -495,15 +498,14 @@ def create_and_display_graphs(user_input):
 
         basic_layout = go.Layout(title=f"Combined New, Active, and Former COVID-19 cases across the globe",
             xaxis_title = "Country",
-            yaxis_title = "No. People Infected",
+            yaxis_title = "No. People Directly Affected by COVID-19",
             font=dict(
                 family="Roboto Slab, monospace",
-                size=14,
+                size=10,
                 color="#000"
                 ),
             )
         
-
     else:
         xvals = ['New Cases', 'Active Cases', 'New Deaths', 'Total Cases']
         yvals = []
@@ -518,55 +520,206 @@ def create_and_display_graphs(user_input):
 
         basic_layout = go.Layout(title=f"COVID-19 cases in {user_input.title()}",
             xaxis_title = "Types of cases",
-            yaxis_title = "People Infected/Affected",
+            yaxis_title = "No. People",
             font=dict(
                 family="Roboto Slab, monospace",
-                size=14,
+                size=10,
                 color="#000"
-            ),
-            margin_b=125, #increase the bottom margin to have space for caption
-            annotations=[dict(xref='paper',
-                yref='paper',
-                x=0.5,
-                y=-0.25,
-                showarrow=False,
-                font=dict(size=15, color="black"),
-                # text=f"The gap between the average living wage in {user_input.title()} and state minimum wage is"
-                )]
-            )
+                ),
+            )   
 
     fig = go.Figure(data=bar_data, layout=basic_layout)
     return fig.show()
 
 
+def create_and_display_cases_with_population_graphs(user_input):
+    '''Uses plotly to make a bar graph out of user selected data. Launches the plotly graph in the user's browser.
+
+    params
+    ------
+    user_input : str
+        the information the user searches for
+
+    returns
+    -------
+    none
+    '''
+
+    xvals = ['Population (2019)', 'New Cases', 'Active Cases', 'New Deaths', 'Total Cases']
+    yvals = []
+
+    for d in access_population_table(user_input):
+        yvals.append(d[0])
+
+    for d in access_cases_table(user_input):
+        yvals.append(d[0])
+        yvals.append(d[1])
+        yvals.append(d[2])
+        yvals.append(d[3]) 
+
+    bar_data = go.Bar(x=xvals, y=yvals)
+
+    basic_layout = go.Layout(title=f"COVID-19 cases compared to {user_input.title()}'s population",
+        xaxis_title = "Types of cases",
+        yaxis_title = "No. People",
+        font=dict(
+            family="Roboto Slab, monospace",
+            size=10,
+            color="#000"
+            ),
+        )   
+
+    fig = go.Figure(data=bar_data, layout=basic_layout)
+    return fig.show()
+
+
+def show_country_percentage_affected(user_input):
+    '''Takes a country's total COVID-19 cases and divides by its 2019 population
+    to show the user the percentage of the population affected by COVID-19.
+
+    params
+    ------
+    user_input : str
+        the information the user searches for
+
+    returns
+    -------
+    none
+    '''
+    population_and_total_cases_list = []
+
+    for d in access_cases_table(user_input):
+        population_and_total_cases_list.append(d[3])
+
+    for d in access_population_table(user_input):
+        population_and_total_cases_list.append(d[0])
+
+    # divide numbers to get a percentage
+    divide_covid_totals_by_population = (population_and_total_cases_list[0] / population_and_total_cases_list[1])
+    percentage = (divide_covid_totals_by_population * 100)
+    clean_percentage = round(percentage, 4)
+
+    return print(f"COVID-19 has infected {clean_percentage}% of {user_input.title()}'s total population.")
+
+    # need to divide total cases by 2019 population. so, access to case table and pop table. 
+    # then conduct simple maths to divide and get a percentage.
+
+##################### misc user entry ############################
+def user_exit():
+    '''Exits python, with a farewell, when executed.
+
+    params
+    ------
+    none
+
+    returns
+    -------
+    none
+    '''
+    print("Bye!")
+    sys.exit()
+
 if __name__ == '__main__':
     CACHE_DICT = open_cache()
     create_covid_cases_dict(make_request(covid_url))
+    covid_cases_dict = create_covid_cases_dict(make_request(covid_url))
     scrape_wiki_data()
     create_db()
     load_cases()
     load_population()
-
-    create_and_display_graphs("all")
+    # create_and_display_cases_with_population_graphs("Japan")
+    # show_country_percentage_affected("Bangladesh")
+    # create_and_display_graphs("South Korea")
     
-    # while True:
-    #     view_data = input(f'''
-    #         View COVID-19 statistics by country.\n
-    #         To view a list of all recorded countries, type "view"\n
-    #         Otherwise, type in a country (e.g. USA, Japan, Brazil), or \"exit\" to quit:\n''') 
-    #     view_data = view_data.lower()
-    #     if view_data == 'exit':
-    #         sys.exit()
-    #     elif view_data == "view":
-    #         pass
-    #     else:
-    #         pass
-    
+    switch = True
+    while True:
+        while switch == True:
+            ## main input
+            view_data = input('''
+View COVID-19 statistics by country.
 
+There are four viewing options:
+1) To view COVID-19 cases across all countries, type \"1\"
+2) To view detailed COVID-19 information based on one country, type \"2\"
+3) To view COVID-19 information compared to a country's total population (2019), type \"3\"
+4) To view the percentage of a country's population affected by COVID-19, type \"4\"
+Type \"exit\" to quit.\n
+''')
+            if view_data == 'exit':
+                user_exit()
+            
+            elif view_data.isnumeric():
 
-    
+                ## view all countries
+                if view_data == "1":
+                    print("You selected to view COVID-19 cases across all countries.")
+                    print("A graph will now launch in your browser.")
+                    view_data = "all"
+                    time.sleep(1)
+                    create_and_display_cases_graphs(view_data)
 
-    
+                ## view detailed info based on one country
+                elif view_data == "2":
+                    switch = False
+                    print("You selected to view detailed COVID-19 information based on one country.")
+                    while switch == False:
+                        country = input('''
+Type in a country to view its data (e.g., Brazil, United States, Japan).
+Type \"back\" to go back.
+Type \"exit\" to quit.
+''')
+                        if country.lower() == "exit":
+                            user_exit()
+                        elif country.title() not in covid_cases_dict.keys():
+                            print("[Error] That record doesn't seem to be on file. Check your spelling?")
+                            switch = False
+                            break
+                        elif country.lower() == "back":
+                            switch = True
+                        else:
+                            print(f"Launching graph for {country.title()}")
+                            time.sleep(1)
+                            create_and_display_cases_graphs(country)
 
+                ## view COVID-19 info compared to country's population
+                elif view_data == "3":
+                    switch = "option3"
+                    print("You selected to view detailed COVID-19 information along with a country's 2019 population.")
+                    while switch == "option3":
+                        country = input('''
+Type in a country to view its data (e.g., Brazil, United States, Japan).
+Type \"back\" to go back.
+Type \"exit\" to quit.
+''')
+                        if country.lower() == "exit":
+                            user_exit()
+                        elif country.lower() == "back":
+                            switch = True
+                        else:
+                            print(f"Launching graph for {country.title()}")
+                            time.sleep(1)
+                            create_and_display_cases_with_population_graphs(country)
 
+                ## view the percentage of a country's population affected by COVID-19
+                elif view_data == "4":
+                    switch = "option4"
+                    print("You selected to view the percentage of a country's population affected by COVID-19.")
+                    while switch == "option4":
+                        country = input('''
+Type in a country to view its data (e.g., Brazil, United States, Japan).
+Type \"back\" to go back.
+Type \"exit\" to quit.
+''')
+                        if country.lower() == "exit":
+                            user_exit()
+                        elif country.lower() == "back":
+                            switch = True
+                        else:
+                            show_country_percentage_affected(country)
+            elif view_data != "1" "2" "3" or "4":
+                print("[Error] Please enter a valid number.")
+            elif view_data.isaplha():
+                print("[Error] Please enter a valid number.")
 
+            else:
+                pass
